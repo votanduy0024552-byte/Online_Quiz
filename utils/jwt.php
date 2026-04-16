@@ -1,44 +1,36 @@
 ﻿<?php
 /**
  * JWT Token Helper
- * 
- * Handles JWT token generation and validation
  */
 
 class JWT {
     
     /**
      * Generate JWT token
-     * Payload: user_id, username, role, email, iat, exp
      */
     public static function generateToken(\, \, \, \) {
         try {
-            // Token header
             \ = [
                 'alg' => 'HS256',
                 'typ' => 'JWT'
             ];
             
-            // Token payload
             \ = [
                 'user_id' => \,
                 'username' => \,
                 'role' => \,
                 'email' => \,
                 'iat' => time(),
-                'exp' => time() + (60 * 60 * 24) // 24 hours
+                'exp' => time() + (60 * 60 * 24)
             ];
             
-            // Encode header and payload
             \ = base64_encode(json_encode(\));
             \ = base64_encode(json_encode(\));
             
-            // Create signature
             \ = \ . '.' . \;
             \ = hash_hmac('sha256', \, JWT_SECRET, true);
             \ = base64_encode(\);
             
-            // Create token
             \ = \ . '.' . \;
             
             return [
@@ -57,11 +49,9 @@ class JWT {
     
     /**
      * Validate JWT token
-     * Returns: ['success' => bool, 'payload' => array, 'message' => string]
      */
     public static function validateToken(\) {
         try {
-            // Check token format
             \ = explode('.', \);
             if (count(\) !== 3) {
                 return [
@@ -72,7 +62,6 @@ class JWT {
             
             list(\, \, \) = \;
             
-            // Verify signature
             \ = \ . '.' . \;
             \ = base64_decode(\);
             \ = hash_hmac('sha256', \, JWT_SECRET, true);
@@ -84,7 +73,6 @@ class JWT {
                 ];
             }
             
-            // Decode payload
             \ = json_decode(base64_decode(\), true);
             
             if (!\) {
@@ -94,7 +82,6 @@ class JWT {
                 ];
             }
             
-            // Check expiration
             if (\['exp'] < time()) {
                 return [
                     'success' => false,
@@ -118,7 +105,6 @@ class JWT {
     
     /**
      * Get token from header
-     * Authorization: Bearer <token>
      */
     public static function getTokenFromHeader() {
         \ = getallheaders();

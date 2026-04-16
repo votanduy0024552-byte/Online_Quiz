@@ -1,6 +1,6 @@
 ﻿<?php
 /**
- * API Entry Point - Tuần 2: Authentication & User Management
+ * API Entry Point - Week 2: Authentication & User Management
  */
 
 // Load config
@@ -36,7 +36,7 @@ header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Content-Type: application/json; charset=utf-8');
 
-// Handle CORS preflight
+// Handle CORS
 if (\['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(HTTP_OK);
     exit;
@@ -45,150 +45,126 @@ if (\['REQUEST_METHOD'] === 'OPTIONS') {
 // Initialize router
 \ = new Router();
 
-// Initialize controllers
+// Controllers
 \ = new AuthController();
 \ = new UserController();
 
 // ============================================================
-// HEALTH CHECK ENDPOINT
+// HEALTH CHECK
 // ============================================================
 \->get('api/health', function() {
-    Response::json(Response::success(['status' => 'ok', 'timestamp' => date('Y-m-d H:i:s')], 'API is running'), HTTP_OK);
+    Response::json(Response::success(['status' => 'ok'], 'API running'), HTTP_OK);
 });
 
 // ============================================================
-// AUTHENTICATION ENDPOINTS (TUẦN 2)
+// AUTH ENDPOINTS
 // ============================================================
-
-// POST /api/auth/login
 \->post('api/auth/login', function() {
     global \;
     \->login();
 });
 
-// POST /api/auth/register
 \->post('api/auth/register', function() {
     global \;
     \->register();
 });
 
-// POST /api/auth/logout
 \->post('api/auth/logout', function() {
     global \;
     \->logout();
 });
 
-// POST /api/auth/reset-password
 \->post('api/auth/reset-password', function() {
     global \;
     \->resetPassword();
 });
 
-// GET /api/auth/me
 \->get('api/auth/me', function() {
     global \;
     \->getCurrentUser();
 });
 
 // ============================================================
-// USER PROFILE ENDPOINTS (TUẦN 2)
+// USER ENDPOINTS
 // ============================================================
-
-// GET /api/users/:id
 \->get('api/users/:id', function(\) {
     global \;
     \ = \[0] ?? null;
     if (!\) {
-        Response::json(Response::error('User ID không hợp lệ', HTTP_BAD_REQUEST), HTTP_BAD_REQUEST);
+        Response::json(Response::error('Invalid user ID', HTTP_BAD_REQUEST), HTTP_BAD_REQUEST);
+        return;
     }
     \->getProfile(\);
 });
 
-// PUT /api/users/:id
 \->put('api/users/:id', function(\) {
     global \;
     \ = \[0] ?? null;
     if (!\) {
-        Response::json(Response::error('User ID không hợp lệ', HTTP_BAD_REQUEST), HTTP_BAD_REQUEST);
+        Response::json(Response::error('Invalid user ID', HTTP_BAD_REQUEST), HTTP_BAD_REQUEST);
+        return;
     }
     \->updateProfile(\);
 });
 
-// PUT /api/users/:id/password
 \->put('api/users/:id/password', function(\) {
     global \;
     \ = \[0] ?? null;
     if (!\) {
-        Response::json(Response::error('User ID không hợp lệ', HTTP_BAD_REQUEST), HTTP_BAD_REQUEST);
+        Response::json(Response::error('Invalid user ID', HTTP_BAD_REQUEST), HTTP_BAD_REQUEST);
+        return;
     }
     \->changePassword(\);
 });
 
-// GET /api/users/pending
 \->get('api/users/pending', function() {
     global \;
     \->getPendingStudents();
 });
 
-// PUT /api/users/:id/approve
 \->put('api/users/:id/approve', function(\) {
     global \;
     \ = \[0] ?? null;
     if (!\) {
-        Response::json(Response::error('User ID không hợp lệ', HTTP_BAD_REQUEST), HTTP_BAD_REQUEST);
+        Response::json(Response::error('Invalid user ID', HTTP_BAD_REQUEST), HTTP_BAD_REQUEST);
+        return;
     }
     \->approveUser(\);
 });
 
-// PUT /api/users/:id/reject
 \->put('api/users/:id/reject', function(\) {
     global \;
     \ = \[0] ?? null;
     if (!\) {
-        Response::json(Response::error('User ID không hợp lệ', HTTP_BAD_REQUEST), HTTP_BAD_REQUEST);
+        Response::json(Response::error('Invalid user ID', HTTP_BAD_REQUEST), HTTP_BAD_REQUEST);
+        return;
     }
     \->rejectUser(\);
 });
 
 // ============================================================
-// CATEGORY ENDPOINTS (TUẦN 1)
+// CATEGORY ENDPOINTS
 // ============================================================
-
-// GET /api/khoi-lop
 \->get('api/khoi-lop', function() {
     \ = new KhoiLop();
     \ = \->getAll();
-    Response::json(Response::success(\, 'Lấy danh sách khối lớp thành công'), HTTP_OK);
+    Response::json(Response::success(\, 'Get grades'), HTTP_OK);
 });
 
-// GET /api/mon-hoc
 \->get('api/mon-hoc', function() {
     \ = \['khoi_id'] ?? null;
     \ = new MonHoc();
-    
-    if (\) {
-        \ = \->getByKhoi(\);
-    } else {
-        \ = \->getAll();
-    }
-    
-    Response::json(Response::success(\, 'Lấy danh sách môn học thành công'), HTTP_OK);
+    \ = \ ? \->getByKhoi(\) : \->getAll();
+    Response::json(Response::success(\, 'Get subjects'), HTTP_OK);
 });
 
-// GET /api/chu-de
 \->get('api/chu-de', function() {
     \ = \['mon_id'] ?? null;
     \ = new ChuDe();
-    
-    if (\) {
-        \ = \->getByMon(\);
-    } else {
-        \ = \->getAll();
-    }
-    
-    Response::json(Response::success(\, 'Lấy danh sách chủ đề thành công'), HTTP_OK);
+    \ = \ ? \->getByMon(\) : \->getAll();
+    Response::json(Response::success(\, 'Get topics'), HTTP_OK);
 });
 
-// Dispatch request
+// Dispatch
 \->dispatch();
 ?>

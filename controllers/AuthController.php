@@ -1,8 +1,6 @@
 ﻿<?php
 /**
  * Auth Controller
- * 
- * Handles authentication logic: login, register, logout, reset password
  */
 
 class AuthController {
@@ -15,34 +13,30 @@ class AuthController {
     
     /**
      * POST /api/auth/login
-     * Body: { username, password }
-     * Response: { success, code, message, data: { user, token } }
      */
     public function login() {
         try {
-            // Get request body
             \ = file_get_contents('php://input');
             \ = json_decode(\, true);
             
-            // Validate input
             if (empty(\['username']) || empty(\['password'])) {
-                return Response::json(
+                Response::json(
                     Response::error('Vui lòng nhập tên đăng nhập và mật khẩu', HTTP_BAD_REQUEST),
                     HTTP_BAD_REQUEST
                 );
+                return;
             }
             
-            // Login
             \ = \->userModel->login(\['username'], \['password']);
             
             if (!\['success']) {
-                return Response::json(
+                Response::json(
                     Response::error(\['message'], HTTP_UNAUTHORIZED),
                     HTTP_UNAUTHORIZED
                 );
+                return;
             }
             
-            // Generate JWT token
             \ = \['user'];
             \ = JWT::generateToken(
                 \['id'],
@@ -52,14 +46,14 @@ class AuthController {
             );
             
             if (!\['success']) {
-                return Response::json(
+                Response::json(
                     Response::error('Lỗi tạo token', HTTP_INTERNAL_ERROR),
                     HTTP_INTERNAL_ERROR
                 );
+                return;
             }
             
-            // Return response
-            return Response::json(
+            Response::json(
                 Response::success(
                     [
                         'user' => \,
@@ -72,8 +66,8 @@ class AuthController {
             );
             
         } catch(Exception \) {
-            logError('Login Controller Error: ' . \->getMessage());
-            return Response::json(
+            logError('Login Error: ' . \->getMessage());
+            Response::json(
                 Response::error('Lỗi hệ thống', HTTP_INTERNAL_ERROR),
                 HTTP_INTERNAL_ERROR
             );
@@ -82,27 +76,23 @@ class AuthController {
     
     /**
      * POST /api/auth/register
-     * Body: { username, password, full_name, email, phone, cccd, date_of_birth, gender, role }
-     * Response: { success, code, message, data: { user_id } }
      */
     public function register() {
         try {
-            // Get request body
             \ = file_get_contents('php://input');
             \ = json_decode(\, true);
             
-            // Register
             \ = \->userModel->register(\);
             
             if (!\['success']) {
-                return Response::json(
+                Response::json(
                     Response::error(\['message'], HTTP_BAD_REQUEST),
                     HTTP_BAD_REQUEST
                 );
+                return;
             }
             
-            // Return response
-            return Response::json(
+            Response::json(
                 Response::success(
                     ['user_id' => \['user_id']],
                     \['message'],
@@ -112,8 +102,8 @@ class AuthController {
             );
             
         } catch(Exception \) {
-            logError('Register Controller Error: ' . \->getMessage());
-            return Response::json(
+            logError('Register Error: ' . \->getMessage());
+            Response::json(
                 Response::error('Lỗi hệ thống', HTTP_INTERNAL_ERROR),
                 HTTP_INTERNAL_ERROR
             );
@@ -122,24 +112,20 @@ class AuthController {
     
     /**
      * POST /api/auth/reset-password
-     * Body: { username, phone, cccd, new_password }
-     * Response: { success, code, message }
      */
     public function resetPassword() {
         try {
-            // Get request body
             \ = file_get_contents('php://input');
             \ = json_decode(\, true);
             
-            // Validate input
             if (empty(\['username']) || empty(\['phone']) || empty(\['cccd']) || empty(\['new_password'])) {
-                return Response::json(
+                Response::json(
                     Response::error('Vui lòng điền đầy đủ thông tin', HTTP_BAD_REQUEST),
                     HTTP_BAD_REQUEST
                 );
+                return;
             }
             
-            // Reset password
             \ = \->userModel->resetPassword(
                 \['username'],
                 \['phone'],
@@ -148,20 +134,21 @@ class AuthController {
             );
             
             if (!\['success']) {
-                return Response::json(
+                Response::json(
                     Response::error(\['message'], HTTP_BAD_REQUEST),
                     HTTP_BAD_REQUEST
                 );
+                return;
             }
             
-            return Response::json(
+            Response::json(
                 Response::success(null, \['message'], HTTP_OK),
                 HTTP_OK
             );
             
         } catch(Exception \) {
-            logError('Reset Password Controller Error: ' . \->getMessage());
-            return Response::json(
+            logError('Reset Password Error: ' . \->getMessage());
+            Response::json(
                 Response::error('Lỗi hệ thống', HTTP_INTERNAL_ERROR),
                 HTTP_INTERNAL_ERROR
             );
@@ -170,22 +157,19 @@ class AuthController {
     
     /**
      * POST /api/auth/logout
-     * Body: {}
-     * Response: { success, code, message }
      */
     public function logout() {
         try {
-            // Clear session
             session_destroy();
             
-            return Response::json(
+            Response::json(
                 Response::success(null, 'Đăng xuất thành công', HTTP_OK),
                 HTTP_OK
             );
             
         } catch(Exception \) {
-            logError('Logout Controller Error: ' . \->getMessage());
-            return Response::json(
+            logError('Logout Error: ' . \->getMessage());
+            Response::json(
                 Response::error('Lỗi hệ thống', HTTP_INTERNAL_ERROR),
                 HTTP_INTERNAL_ERROR
             );
@@ -194,51 +178,49 @@ class AuthController {
     
     /**
      * GET /api/auth/me
-     * Header: Authorization: Bearer <token>
-     * Response: { success, code, message, data: { user } }
      */
     public function getCurrentUser() {
         try {
-            // Get token from header
             \ = JWT::getTokenFromHeader();
             
             if (!token) {
-                return Response::json(
+                Response::json(
                     Response::error('Token không tìm thấy', HTTP_UNAUTHORIZED),
                     HTTP_UNAUTHORIZED
                 );
+                return;
             }
             
-            // Validate token
             \ = JWT::validateToken(\);
             
             if (!\['success']) {
-                return Response::json(
+                Response::json(
                     Response::error(\['message'], HTTP_UNAUTHORIZED),
                     HTTP_UNAUTHORIZED
                 );
+                return;
             }
             
-            // Get user
             \ = \['payload'];
             \ = new User();
             \ = \->getUserById(\['user_id']);
             
             if (!\) {
-                return Response::json(
+                Response::json(
                     Response::error('Người dùng không tồn tại', HTTP_NOT_FOUND),
                     HTTP_NOT_FOUND
                 );
+                return;
             }
             
-            return Response::json(
+            Response::json(
                 Response::success(\, 'Lấy thông tin người dùng thành công', HTTP_OK),
                 HTTP_OK
             );
             
         } catch(Exception \) {
             logError('Get Current User Error: ' . \->getMessage());
-            return Response::json(
+            Response::json(
                 Response::error('Lỗi hệ thống', HTTP_INTERNAL_ERROR),
                 HTTP_INTERNAL_ERROR
             );

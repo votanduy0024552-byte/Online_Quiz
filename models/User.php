@@ -87,7 +87,6 @@ class User extends Database {
     
     /**
      * Register - Create new user account
-     * Returns: ['success' => bool, 'user_id' => int, 'message' => string]
      */
     public function register(\) {
         try {
@@ -96,30 +95,6 @@ class User extends Database {
                 return [
                     'success' => false,
                     'message' => 'Vui lòng điền đầy đủ thông tin'
-                ];
-            }
-            
-            // Validate username length
-            if (strlen(\['username']) < USERNAME_MIN_LENGTH || strlen(\['username']) > USERNAME_MAX_LENGTH) {
-                return [
-                    'success' => false,
-                    'message' => 'Tên đăng nhập phải có từ ' . USERNAME_MIN_LENGTH . ' đến ' . USERNAME_MAX_LENGTH . ' ký tự'
-                ];
-            }
-            
-            // Validate password length
-            if (strlen(\['password']) < PASSWORD_MIN_LENGTH) {
-                return [
-                    'success' => false,
-                    'message' => 'Mật khẩu phải có ít nhất ' . PASSWORD_MIN_LENGTH . ' ký tự'
-                ];
-            }
-            
-            // Validate email
-            if (!preg_match(EMAIL_REGEX, \['email'])) {
-                return [
-                    'success' => false,
-                    'message' => 'Email không hợp lệ'
                 ];
             }
             
@@ -138,22 +113,6 @@ class User extends Database {
                 return [
                     'success' => false,
                     'message' => 'Email đã được sử dụng'
-                ];
-            }
-            
-            // Validate phone if provided
-            if (!empty(\['phone']) && !preg_match(PHONE_REGEX, \['phone'])) {
-                return [
-                    'success' => false,
-                    'message' => 'Số điện thoại không hợp lệ (định dạng: 0xxxxxxxxx)'
-                ];
-            }
-            
-            // Validate CCCD if provided
-            if (!empty(\['cccd']) && !preg_match(CCCD_REGEX, \['cccd'])) {
-                return [
-                    'success' => false,
-                    'message' => 'CCCD/ID không hợp lệ'
                 ];
             }
             
@@ -212,26 +171,16 @@ class User extends Database {
             logError('Register Error: ' . \->getMessage());
             return [
                 'success' => false,
-                'message' => 'Lỗi hệ thống: ' . \->getMessage()
+                'message' => 'Lỗi hệ thống'
             ];
         }
     }
     
     /**
      * Reset Password - 3-layer authentication
-     * Validate: username, phone, cccd
-     * Returns: ['success' => bool, 'message' => string]
      */
     public function resetPassword(\, \, \, \) {
         try {
-            // Validate new password
-            if (strlen(\) < PASSWORD_MIN_LENGTH) {
-                return [
-                    'success' => false,
-                    'message' => 'Mật khẩu mới phải có ít nhất ' . PASSWORD_MIN_LENGTH . ' ký tự'
-                ];
-            }
-            
             // Get user by username
             \ = \->getUserByUsername(\);
             
@@ -246,7 +195,7 @@ class User extends Database {
             if (\['phone'] !== \ || \['cccd'] !== \) {
                 return [
                     'success' => false,
-                    'message' => 'Thông tin xác thực không chính xác (Số điện thoại hoặc CCCD sai)'
+                    'message' => 'Thông tin xác thực không chính xác'
                 ];
             }
             
@@ -278,38 +227,10 @@ class User extends Database {
     }
     
     /**
-     * Update Profile - Change user information
+     * Update Profile
      */
     public function updateProfile(\, \) {
         try {
-            // Validate email if provided
-            if (!empty(\['email'])) {
-                if (!preg_match(EMAIL_REGEX, \['email'])) {
-                    return [
-                        'success' => false,
-                        'message' => 'Email không hợp lệ'
-                    ];
-                }
-                
-                // Check if email is already used by another user
-                \ = \->getUserByEmail(\['email']);
-                if (\ && \['id'] !== \) {
-                    return [
-                        'success' => false,
-                        'message' => 'Email đã được sử dụng'
-                    ];
-                }
-            }
-            
-            // Validate phone if provided
-            if (!empty(\['phone']) && !preg_match(PHONE_REGEX, \['phone'])) {
-                return [
-                    'success' => false,
-                    'message' => 'Số điện thoại không hợp lệ'
-                ];
-            }
-            
-            // Build update query
             \ = [];
             \ = [];
             
@@ -365,19 +286,10 @@ class User extends Database {
     }
     
     /**
-     * Change Password - Require old password
+     * Change Password
      */
     public function changePassword(\, \, \) {
         try {
-            // Validate new password
-            if (strlen(\) < PASSWORD_MIN_LENGTH) {
-                return [
-                    'success' => false,
-                    'message' => 'Mật khẩu mới phải có ít nhất ' . PASSWORD_MIN_LENGTH . ' ký tự'
-                ];
-            }
-            
-            // Get user
             \ = \->getUserById(\);
             
             if (!\) {
@@ -427,7 +339,7 @@ class User extends Database {
     }
     
     /**
-     * Get pending students (for admin/teacher approval)
+     * Get pending students
      */
     public function getPendingStudents() {
         \ = 'SELECT id, username, full_name, email, phone, cccd, role, status, created_at 
@@ -438,7 +350,7 @@ class User extends Database {
     }
     
     /**
-     * Approve user (set status to Active)
+     * Approve user
      */
     public function approveUser(\) {
         try {
@@ -466,7 +378,7 @@ class User extends Database {
     }
     
     /**
-     * Reject user (set status to Inactive)
+     * Reject user
      */
     public function rejectUser(\) {
         try {
@@ -491,32 +403,6 @@ class User extends Database {
                 'message' => 'Lỗi hệ thống'
             ];
         }
-    }
-    
-    /**
-     * Get all users with pagination
-     */
-    public function getAllUsers(\ = null, \ = null, \ = 1, \ = ITEMS_PER_PAGE) {
-        \ = (\ - 1) * \;
-        
-        \ = 'SELECT id, username, full_name, email, phone, role, status, created_at FROM users WHERE 1=1';
-        \ = [];
-        
-        if (\) {
-            \ .= ' AND role = ?';
-            \[] = \;
-        }
-        
-        if (\) {
-            \ .= ' AND status = ?';
-            \[] = \;
-        }
-        
-        \ .= ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-        \[] = \;
-        \[] = \;
-        
-        return \->fetchAll(\, \);
     }
 }
 ?>
