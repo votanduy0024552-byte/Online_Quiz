@@ -6,53 +6,53 @@
  */
 
 class Router {
-    private \ = [];
-    private \;
-    private \;
+    private $routes = [];
+    private $method;
+    private $uri;
     
     public function __construct() {
-        \->method = \['REQUEST_METHOD'];
-        \->uri = parse_url(\['REQUEST_URI'], PHP_URL_PATH);
-        \->uri = str_replace(APP_URL, '', \->uri);
-        \->uri = trim(\->uri, '/');
+        $this->method = $_SERVER['REQUEST_METHOD'];
+        $this->uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $this->uri = str_replace(APP_URL, '', $this->uri);
+        $this->uri = trim($this->uri, '/');
     }
     
     /**
      * Register GET route
      */
-    public function get(\, \) {
-        \->addRoute('GET', \, \);
+    public function get($pattern, $callback) {
+        $this->addRoute('GET', $pattern, $callback);
     }
     
     /**
      * Register POST route
      */
-    public function post(\, \) {
-        \->addRoute('POST', \, \);
+    public function post($pattern, $callback) {
+        $this->addRoute('POST', $pattern, $callback);
     }
     
     /**
      * Register PUT route
      */
-    public function put(\, \) {
-        \->addRoute('PUT', \, \);
+    public function put($pattern, $callback) {
+        $this->addRoute('PUT', $pattern, $callback);
     }
     
     /**
      * Register DELETE route
      */
-    public function delete(\, \) {
-        \->addRoute('DELETE', \, \);
+    public function delete($pattern, $callback) {
+        $this->addRoute('DELETE', $pattern, $callback);
     }
     
     /**
      * Add route
      */
-    private function addRoute(\, \, \) {
-        \->routes[] = [
-            'method' => \,
-            'pattern' => \,
-            'callback' => \
+    private function addRoute($method, $pattern, $callback) {
+        $this->routes[] = [
+            'method' => $method,
+            'pattern' => $pattern,
+            'callback' => $callback
         ];
     }
     
@@ -60,11 +60,11 @@ class Router {
      * Dispatch request
      */
     public function dispatch() {
-        foreach (\->routes as \) {
-            if (\->method !== \['method']) continue;
+        foreach ($this->routes as $route) {
+            if ($this->method !== $route['method']) continue;
             
-            if (\->matchRoute(\['pattern'], \)) {
-                return call_user_func(\['callback'], \);
+            if ($this->matchRoute($route['pattern'], $params)) {
+                return call_user_func($route['callback'], $params);
             }
         }
         
@@ -75,12 +75,12 @@ class Router {
     /**
      * Match route pattern
      */
-    private function matchRoute(\, &\) {
-        \ = str_replace(':id', '(\d+)', \);
-        \ = '^' . \ . '\$';
+    private function matchRoute($pattern, &$params) {
+        $pattern = str_replace(':id', '(\d+)', $pattern);
+        $pattern = '^' . $pattern . '\$';
         
-        if (preg_match('/' . \ . '/', \->uri, \)) {
-            \ = array_slice(\, 1);
+        if (preg_match('/' . $pattern . '/', $this->uri, $matches)) {
+            $params = array_slice($matches, 1);
             return true;
         }
         return false;

@@ -34,54 +34,54 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Content-Type: application/json; charset=utf-8');
 
 // Handle CORS preflight
-if (\['REQUEST_METHOD'] === 'OPTIONS') {
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(HTTP_OK);
     exit;
 }
 
 // Initialize router
-\ = new Router();
+$router = new Router();
 
 // Register API routes
 
 // Health check
-\->get('api/health', function() {
+$router->get('api/health', function() {
     Response::json(Response::success(['status' => 'ok'], 'API is running'), HTTP_OK);
 });
 
 // Category routes
-\->get('api/khoi-lop', function() {
-    \ = new KhoiLop();
-    \ = \->getAll();
-    Response::json(Response::success(\, 'Get all grades'), HTTP_OK);
+$router->get('api/khoi-lop', function() {
+    $khoi = new KhoiLop();
+    $data = $khoi->getAll();
+    Response::json(Response::success($data, 'Get all grades'), HTTP_OK);
 });
 
-\->get('api/mon-hoc', function() {
-    \ = \['khoi_id'] ?? null;
-    \ = new MonHoc();
+$router->get('api/mon-hoc', function() {
+    $khoi_id = $_GET['khoi_id'] ?? null;
+    $mon = new MonHoc();
     
-    if (\) {
-        \ = \->getByKhoi(\);
+    if ($khoi_id) {
+        $data = $mon->getByKhoi($khoi_id);
     } else {
-        \ = \->getAll();
+        $data = $mon->getAll();
     }
     
-    Response::json(Response::success(\, 'Get subjects'), HTTP_OK);
+    Response::json(Response::success($data, 'Get subjects'), HTTP_OK);
 });
 
-\->get('api/chu-de', function() {
-    \ = \['mon_id'] ?? null;
-    \ = new ChuDe();
+$router->get('api/chu-de', function() {
+    $mon_id = $_GET['mon_id'] ?? null;
+    $chu_de = new ChuDe();
     
-    if (\) {
-        \ = \->getByMon(\);
+    if ($mon_id) {
+        $data = $chu_de->getByMon($mon_id);
     } else {
-        \ = \->getAll();
+        $data = $chu_de->getAll();
     }
     
-    Response::json(Response::success(\, 'Get topics'), HTTP_OK);
+    Response::json(Response::success($data, 'Get topics'), HTTP_OK);
 });
 
 // Dispatch request
-\->dispatch();
+$router->dispatch();
 ?>

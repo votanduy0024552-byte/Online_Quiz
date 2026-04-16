@@ -6,26 +6,26 @@
  */
 
 class Database {
-    protected \;
-    protected \;
+    protected $pdo;
+    protected $stmt;
     
     public function __construct() {
         try {
-            \ = 'mysql:host=' . DB_HOST . ';port=' . DB_PORT . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET;
+            $dsn = 'mysql:host=' . DB_HOST . ';port=' . DB_PORT . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET;
             
-            \ = [
+            $options = [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
             ];
             
-            \->pdo = new PDO(\, DB_USER, DB_PASS, \);
+            $this->pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
             logMessage('Database connected successfully', 'INFO');
             
-        } catch(PDOException \) {
-            \Cannot find path 'C:\Users\PC\OneDrive - Hochiminh City University of Education\Documents\Online_Quiz\database\schema.sql' because it does not exist. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'. = 'Database Connection Error: ' . \->getMessage();
-            logError(\Cannot find path 'C:\Users\PC\OneDrive - Hochiminh City University of Education\Documents\Online_Quiz\database\schema.sql' because it does not exist. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'.);
-            die(\Cannot find path 'C:\Users\PC\OneDrive - Hochiminh City University of Education\Documents\Online_Quiz\database\schema.sql' because it does not exist. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'.);
+        } catch(PDOException $e) {
+            $error = 'Database Connection Error: ' . $e->getMessage();
+            logError($error);
+            die($error);
         }
     }
     
@@ -33,19 +33,19 @@ class Database {
      * Get PDO instance
      */
     public function getPdo() {
-        return \->pdo;
+        return $this->pdo;
     }
     
     /**
      * Prepare and execute query
      */
-    public function query(\, \ = []) {
+    public function query($sql, $params = []) {
         try {
-            \->stmt = \->pdo->prepare(\);
-            \->stmt->execute(\);
+            $this->stmt = $this->pdo->prepare($sql);
+            $this->stmt->execute($params);
             return true;
-        } catch(PDOException \) {
-            logError('Query Error: ' . \->getMessage() . ' | SQL: ' . \);
+        } catch(PDOException $e) {
+            logError('Query Error: ' . $e->getMessage() . ' | SQL: ' . $sql);
             return false;
         }
     }
@@ -53,9 +53,9 @@ class Database {
     /**
      * Fetch single row
      */
-    public function fetch(\, \ = []) {
-        if (\->query(\, \)) {
-            return \->stmt->fetch();
+    public function fetch($sql, $params = []) {
+        if ($this->query($sql, $params)) {
+            return $this->stmt->fetch();
         }
         return null;
     }
@@ -63,9 +63,9 @@ class Database {
     /**
      * Fetch all rows
      */
-    public function fetchAll(\, \ = []) {
-        if (\->query(\, \)) {
-            return \->stmt->fetchAll();
+    public function fetchAll($sql, $params = []) {
+        if ($this->query($sql, $params)) {
+            return $this->stmt->fetchAll();
         }
         return [];
     }
@@ -74,42 +74,42 @@ class Database {
      * Get row count
      */
     public function rowCount() {
-        return \->stmt ? \->stmt->rowCount() : 0;
+        return $this->stmt ? $this->stmt->rowCount() : 0;
     }
     
     /**
      * Get last insert ID
      */
     public function lastInsertId() {
-        return \->pdo->lastInsertId();
+        return $this->pdo->lastInsertId();
     }
     
     /**
      * Begin transaction
      */
     public function beginTransaction() {
-        return \->pdo->beginTransaction();
+        return $this->pdo->beginTransaction();
     }
     
     /**
      * Commit transaction
      */
     public function commit() {
-        return \->pdo->commit();
+        return $this->pdo->commit();
     }
     
     /**
      * Rollback transaction
      */
     public function rollBack() {
-        return \->pdo->rollBack();
+        return $this->pdo->rollBack();
     }
     
     /**
      * Get statement for custom use
      */
     public function getStatement() {
-        return \->stmt;
+        return $this->stmt;
     }
 }
 ?>
