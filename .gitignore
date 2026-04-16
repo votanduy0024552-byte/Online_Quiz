@@ -1,0 +1,33 @@
+﻿# Environment
+.env
+.env.local
+config/database.php
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Uploads
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Dependencies
+vendor/
+node_modules/
+composer.lock
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp
+*.tmp
+*.bak
+__pycache__/

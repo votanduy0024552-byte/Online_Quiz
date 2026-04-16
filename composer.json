@@ -1,0 +1,30 @@
+﻿{
+    "name": "votanduy0024552-byte/online-quiz",
+    "description": "MyExam Mobile - Learning Management System",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Tuan Duy",
+            "email": "votanduy0024552@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload": {
+        "files": [
+            "config/config.php",
+            "config/constants.php",
+            "utils/helpers.php",
+            "utils/response.php"
+        ],
+        "classmap": [
+            "models/",
+            "controllers/"
+        ]
+    }
+}
