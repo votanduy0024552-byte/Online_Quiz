@@ -32,11 +32,333 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
--- TABLE 2-19: (Copy từ file cũ, chỉ fix phần INSERT)
+-- TABLE 2: KHOI_LOP (Grade Levels)
 -- ============================================================
+CREATE TABLE IF NOT EXISTS khoi_lop (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    ten_khoi VARCHAR(50) NOT NULL UNIQUE,
+    mo_ta TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_ten_khoi (ten_khoi)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- INSERT SEED DATA (FIX: Use proper bcrypt hashes for demo passwords)
--- Password hashes for: admin123, teacher123, student123
+-- ============================================================
+-- TABLE 3: MON_HOC (Subjects)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS mon_hoc (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    ten_mon VARCHAR(100) NOT NULL,
+    khoi_id INT NOT NULL,
+    mo_ta TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (khoi_id) REFERENCES khoi_lop(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_mon_khoi (ten_mon, khoi_id),
+    INDEX idx_khoi_id (khoi_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 4: CHU_DE (Topics/Chapters)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS chu_de (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    ten_chu_de VARCHAR(100) NOT NULL,
+    mon_id INT NOT NULL,
+    khoi_id INT NOT NULL,
+    mo_ta TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (mon_id) REFERENCES mon_hoc(id) ON DELETE CASCADE,
+    FOREIGN KEY (khoi_id) REFERENCES khoi_lop(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_chude_mon (ten_chu_de, mon_id),
+    INDEX idx_mon_id (mon_id),
+    INDEX idx_khoi_id (khoi_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 5: LOP_HOC (Classes)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS lop_hoc (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    ten_lop VARCHAR(50) NOT NULL UNIQUE,
+    khoi_id INT NOT NULL,
+    giao_vien_chu_nhiem_id INT,
+    nam_hoc VARCHAR(10),
+    mo_ta TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (khoi_id) REFERENCES khoi_lop(id) ON DELETE CASCADE,
+    FOREIGN KEY (giao_vien_chu_nhiem_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_khoi_id (khoi_id),
+    INDEX idx_giao_vien_id (giao_vien_chu_nhiem_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 6: QUESTIONS (Question Bank - D1, D2, D3)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS questions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    type ENUM('D1', 'D2', 'D3') NOT NULL,
+    khoi_id INT NOT NULL,
+    mon_id INT NOT NULL,
+    chu_de_id INT,
+    title LONGTEXT NOT NULL,
+    description LONGTEXT,
+    image_url VARCHAR(500),
+    created_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (khoi_id) REFERENCES khoi_lop(id) ON DELETE CASCADE,
+    FOREIGN KEY (mon_id) REFERENCES mon_hoc(id) ON DELETE CASCADE,
+    FOREIGN KEY (chu_de_id) REFERENCES chu_de(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
+    INDEX idx_type (type),
+    INDEX idx_khoi_id (khoi_id),
+    INDEX idx_mon_id (mon_id),
+    INDEX idx_chu_de_id (chu_de_id),
+    FULLTEXT INDEX ft_title (title)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 7: QUESTION_D1 (Multiple Choice Options)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS question_d1 (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    question_id INT NOT NULL UNIQUE,
+    option_a VARCHAR(500) NOT NULL,
+    option_b VARCHAR(500) NOT NULL,
+    option_c VARCHAR(500) NOT NULL,
+    option_d VARCHAR(500) NOT NULL,
+    correct_answer ENUM('A', 'B', 'C', 'D') NOT NULL,
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 8: QUESTION_D2 (True/False - 4 Statements)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS question_d2 (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    question_id INT NOT NULL UNIQUE,
+    statement_1 VARCHAR(500) NOT NULL,
+    statement_2 VARCHAR(500) NOT NULL,
+    statement_3 VARCHAR(500) NOT NULL,
+    statement_4 VARCHAR(500) NOT NULL,
+    correct_answer VARCHAR(4) NOT NULL,
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 9: QUESTION_D3 (Short Answer)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS question_d3 (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    question_id INT NOT NULL UNIQUE,
+    answer_type ENUM('text', 'blank') NOT NULL,
+    answer_1 VARCHAR(500),
+    answer_2 VARCHAR(500),
+    answer_3 VARCHAR(500),
+    answer_4 VARCHAR(500),
+    num_blanks INT DEFAULT 1,
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 10: EXAMS (Exam Master)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS exams (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    description LONGTEXT,
+    password VARCHAR(255),
+    duration INT NOT NULL,
+    start_time DATETIME NOT NULL,
+    end_time DATETIME NOT NULL,
+    condition ENUM('ALL', 'GRADE_10', 'GRADE_11', 'GRADE_12', 'SPECIFIC_CLASS') DEFAULT 'ALL',
+    specific_class_id INT,
+    status ENUM('DRAFT', 'OPEN', 'CLOSED') DEFAULT 'DRAFT',
+    created_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
+    FOREIGN KEY (specific_class_id) REFERENCES lop_hoc(id) ON DELETE SET NULL,
+    INDEX idx_status (status),
+    INDEX idx_start_time (start_time),
+    INDEX idx_end_time (end_time),
+    INDEX idx_created_by (created_by)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 11: EXAM_DETAILS (Questions in Each Exam)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS exam_details (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    exam_id INT NOT NULL,
+    question_id INT NOT NULL,
+    question_order INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE RESTRICT,
+    UNIQUE KEY unique_exam_question (exam_id, question_id),
+    INDEX idx_exam_id (exam_id),
+    INDEX idx_question_id (question_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 12: EXAM_SUBMISSIONS (Student Exam Attempts)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS exam_submissions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    exam_id INT NOT NULL,
+    student_id INT NOT NULL,
+    status ENUM('IN_PROGRESS', 'SUBMITTED', 'TIMEOUT') DEFAULT 'IN_PROGRESS',
+    start_time DATETIME NOT NULL,
+    submit_time DATETIME,
+    d1_score FLOAT DEFAULT 0,
+    d2_score FLOAT DEFAULT 0,
+    d3_score FLOAT DEFAULT 0,
+    total_score FLOAT DEFAULT 0,
+    percentage FLOAT DEFAULT 0,
+    grade VARCHAR(2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_student_exam (exam_id, student_id),
+    INDEX idx_exam_id (exam_id),
+    INDEX idx_student_id (student_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 13: EXAM_ANSWERS (Student Answers)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS exam_answers (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    submission_id INT NOT NULL,
+    question_id INT NOT NULL,
+    student_answer VARCHAR(500),
+    is_correct BOOLEAN DEFAULT FALSE,
+    question_score FLOAT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (submission_id) REFERENCES exam_submissions(id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_submission_question (submission_id, question_id),
+    INDEX idx_submission_id (submission_id),
+    INDEX idx_question_id (question_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 14: ATTENDANCE_SCHEDULES (Điểm Danh Lịch)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS attendance_schedules (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    class_id INT NOT NULL,
+    attendance_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    description VARCHAR(255),
+    created_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (class_id) REFERENCES lop_hoc(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
+    UNIQUE KEY unique_class_date (class_id, attendance_date),
+    INDEX idx_class_id (class_id),
+    INDEX idx_attendance_date (attendance_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 15: ATTENDANCE (Điểm Danh Chi Tiết)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS attendance (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    schedule_id INT NOT NULL,
+    student_id INT NOT NULL,
+    status ENUM('PRESENT', 'ABSENT', 'LATE', 'EXCUSED') DEFAULT 'ABSENT',
+    marked_time DATETIME,
+    marked_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (schedule_id) REFERENCES attendance_schedules(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (marked_by) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_schedule_student (schedule_id, student_id),
+    INDEX idx_schedule_id (schedule_id),
+    INDEX idx_student_id (student_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 16: LEAVE_REQUESTS (Đơn Xin Nghỉ)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS leave_requests (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    student_id INT NOT NULL,
+    class_id INT NOT NULL,
+    leave_date DATE NOT NULL,
+    reason LONGTEXT NOT NULL,
+    status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
+    reviewed_by INT,
+    reviewed_at DATETIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (class_id) REFERENCES lop_hoc(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_student_id (student_id),
+    INDEX idx_class_id (class_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 17: NOTIFICATIONS (Thông Báo)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    type ENUM('SCHOOL', 'CLASS', 'PERSONAL') DEFAULT 'PERSONAL',
+    title VARCHAR(255) NOT NULL,
+    message LONGTEXT NOT NULL,
+    sender_id INT NOT NULL,
+    recipient_id INT,
+    class_id INT,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (class_id) REFERENCES lop_hoc(id) ON DELETE CASCADE,
+    INDEX idx_recipient_id (recipient_id),
+    INDEX idx_class_id (class_id),
+    INDEX idx_is_read (is_read)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 18: CLASS_STUDENTS (Lớp và Học Sinh)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS class_students (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    class_id INT NOT NULL,
+    student_id INT NOT NULL,
+    enrolled_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (class_id) REFERENCES lop_hoc(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_class_student (class_id, student_id),
+    INDEX idx_class_id (class_id),
+    INDEX idx_student_id (student_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TABLE 19: TEACHER_PERMISSIONS (Quyền Giáo Viên)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS teacher_permissions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    teacher_id INT NOT NULL,
+    khoi_id INT NOT NULL,
+    mon_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (khoi_id) REFERENCES khoi_lop(id) ON DELETE CASCADE,
+    FOREIGN KEY (mon_id) REFERENCES mon_hoc(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_teacher_khoi_mon (teacher_id, khoi_id, mon_id),
+    INDEX idx_teacher_id (teacher_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- INSERT SEED DATA
+-- ============================================================
 
 -- Khối lớp
 INSERT INTO khoi_lop (ten_khoi, mo_ta) VALUES
