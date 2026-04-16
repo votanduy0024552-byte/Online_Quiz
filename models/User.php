@@ -2,100 +2,521 @@
 /**
  * User Model
  * 
- * Handles user authentication and management
+ * Handles user authentication, registration, and profile management
  */
 
 class User extends Database {
     
-    public function __construct(\) {
-        parent::__construct(\);
-        \->table = 'users';
+    public function __construct() {
+        parent::__construct();
     }
     
     /**
      * Get user by ID
      */
     public function getUserById(\) {
-        \ = "SELECT * FROM {\->table} WHERE id = ? AND status = ?";
-        return \->fetch(\, [\, STATUS_ACTIVE]);
+        \ = 'SELECT id, username, full_name, email, phone, cccd, avatar_url, date_of_birth, gender, role, status, created_at, updated_at 
+                 FROM users WHERE id = ?';
+        return \->fetch(\, [\]);
     }
     
     /**
      * Get user by username
      */
     public function getUserByUsername(\) {
-        \ = "SELECT * FROM {\->table} WHERE username = ?";
+        \ = 'SELECT * FROM users WHERE username = ?';
         return \->fetch(\, [\]);
     }
     
     /**
-     * Login
+     * Get user by email
      */
-    public function login(\, \) {
-        \ = \->getUserByUsername(\);
-        
-        if (!\) {
-            return ['success' => false, 'message' => 'Username hoặc password sai'];
-        }
-        
-        if (\['status'] !== STATUS_ACTIVE) {
-            return ['success' => false, 'message' => 'Tài khoản chưa được duyệt hoặc bị khóa'];
-        }
-        
-        if (!password_verify(\, \['password'])) {
-            return ['success' => false, 'message' => 'Username hoặc password sai'];
-        }
-        
-        return ['success' => true, 'user' => \];
+    public function getUserByEmail(\) {
+        \ = 'SELECT * FROM users WHERE email = ?';
+        return \->fetch(\, [\]);
     }
     
     /**
-     * Register new user
+     * Login - Validate username and password
+     * Returns: ['success' => bool, 'user' => array, 'message' => string]
+     */
+    public function login(\, \) {
+        try {
+            // Check if user exists
+            \ = \->getUserByUsername(\);
+            
+            if (!\) {
+                return [
+                    'success' => false,
+                    'message' => 'Tên đăng nhập hoặc mật khẩu không chính xác'
+                ];
+            }
+            
+            // Check if account is active
+            if (\['status'] !== STATUS_ACTIVE) {
+                return [
+                    'success' => false,
+                    'message' => 'Tài khoản chưa được duyệt hoặc đã bị khóa'
+                ];
+            }
+            
+            // Verify password
+            if (!password_verify(\, \['password'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Tên đăng nhập hoặc mật khẩu không chính xác'
+                ];
+            }
+            
+            // Return user without password
+            unset(\['password']);
+            return [
+                'success' => true,
+                'user' => \,
+                'message' => 'Đăng nhập thành công'
+            ];
+            
+        } catch(Exception \) {
+            logError('Login Error: ' . \->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Lỗi hệ thống'
+            ];
+        }
+    }
+    
+    /**
+     * Register - Create new user account
+     * Returns: ['success' => bool, 'user_id' => int, 'message' => string]
      */
     public function register(\) {
         try {
-            \->beginTransaction();
+            // Validate required fields
+            if (empty(\['username']) || empty(\['password']) || empty(\['full_name']) || empty(\['email'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Vui lòng điền đầy đủ thông tin'
+                ];
+            }
             
-            // Check if user exists
+            // Validate username length
+            if (strlen(\['username']) < USERNAME_MIN_LENGTH || strlen(\['username']) > USERNAME_MAX_LENGTH) {
+                return [
+                    'success' => false,
+                    'message' => 'Tên đăng nhập phải có từ ' . USERNAME_MIN_LENGTH . ' đến ' . USERNAME_MAX_LENGTH . ' ký tự'
+                ];
+            }
+            
+            // Validate password length
+            if (strlen(\['password']) < PASSWORD_MIN_LENGTH) {
+                return [
+                    'success' => false,
+                    'message' => 'Mật khẩu phải có ít nhất ' . PASSWORD_MIN_LENGTH . ' ký tự'
+                ];
+            }
+            
+            // Validate email
+            if (!preg_match(EMAIL_REGEX, \['email'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Email không hợp lệ'
+                ];
+            }
+            
+            // Check if username exists
             \ = \->getUserByUsername(\['username']);
             if (\) {
-                return ['success' => false, 'message' => 'Username đã tồn tại'];
+                return [
+                    'success' => false,
+                    'message' => 'Tên đăng nhập đã tồn tại'
+                ];
             }
             
-            // Hash password
-            \ = password_hash(\['password'], PASSWORD_BCRYPT);
-            \ = \['role'] ?? ROLE_STUDENT;
-            \ = (\ === ROLE_TEACHER) ? STATUS_ACTIVE : STATUS_PENDING;
+            // Check if email exists
+            \ = \->getUserByEmail(\['email']);
+            if (\) {
+                return [
+                    'success' => false,
+                    'message' => 'Email đã được sử dụng'
+                ];
+            }
             
-            \ = "INSERT INTO {\->table} (username, password, full_name, email, phone, cccd, date_of_birth, gender, role, status, created_at) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+            // Validate phone if provided
+            if (!empty(\['phone']) && !preg_match(PHONE_REGEX, \['phone'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Số điện thoại không hợp lệ (định dạng: 0xxxxxxxxx)'
+                ];
+            }
             
-            \ = [
-                \['username'],
-                \,
-                \['full_name'],
-                \['email'],
-                \['phone'] ?? null,
-                \['cccd'] ?? null,
-                \['date_of_birth'] ?? null,
-                \['gender'] ?? null,
-                \,
-                \
-            ];
+            // Validate CCCD if provided
+            if (!empty(\['cccd']) && !preg_match(CCCD_REGEX, \['cccd'])) {
+                return [
+                    'success' => false,
+                    'message' => 'CCCD/ID không hợp lệ'
+                ];
+            }
             
-            if (\->query(\, \)) {
+            // Start transaction
+            \->beginTransaction();
+            
+            try {
+                // Determine role and status
+                \ = \['role'] ?? ROLE_STUDENT;
+                \ = (\ === ROLE_TEACHER) ? STATUS_ACTIVE : STATUS_PENDING;
+                
+                // Hash password
+                \ = password_hash(\['password'], PASSWORD_HASH_ALGO);
+                
+                // Insert user
+                \ = 'INSERT INTO users (username, password, full_name, email, phone, cccd, date_of_birth, gender, role, status) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+                
+                \ = [
+                    \['username'],
+                    \,
+                    \['full_name'],
+                    \['email'],
+                    \['phone'] ?? null,
+                    \['cccd'] ?? null,
+                    \['date_of_birth'] ?? null,
+                    \['gender'] ?? null,
+                    \,
+                    \
+                ];
+                
+                if (!\->query(\, \)) {
+                    throw new Exception('Không thể tạo tài khoản');
+                }
+                
+                \ = \->lastInsertId();
+                
                 \->commit();
-                return ['success' => true, 'message' => 'Đăng ký thành công. Vui lòng chờ duyệt.'];
+                
+                \ = (\ === STATUS_PENDING) 
+                    ? 'Đăng ký thành công. Vui lòng chờ duyệt từ giáo viên.' 
+                    : 'Đăng ký thành công';
+                
+                return [
+                    'success' => true,
+                    'user_id' => \,
+                    'message' => \
+                ];
+                
+            } catch(Exception \) {
+                \->rollBack();
+                throw \;
             }
-            
-            \->rollBack();
-            return ['success' => false, 'message' => 'Lỗi tạo tài khoản'];
             
         } catch(Exception \) {
-            \->rollBack();
-            error_log('Register Error: ' . \->getMessage());
-            return ['success' => false, 'message' => 'Lỗi hệ thống'];
+            logError('Register Error: ' . \->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Lỗi hệ thống: ' . \->getMessage()
+            ];
         }
+    }
+    
+    /**
+     * Reset Password - 3-layer authentication
+     * Validate: username, phone, cccd
+     * Returns: ['success' => bool, 'message' => string]
+     */
+    public function resetPassword(\, \, \, \) {
+        try {
+            // Validate new password
+            if (strlen(\) < PASSWORD_MIN_LENGTH) {
+                return [
+                    'success' => false,
+                    'message' => 'Mật khẩu mới phải có ít nhất ' . PASSWORD_MIN_LENGTH . ' ký tự'
+                ];
+            }
+            
+            // Get user by username
+            \ = \->getUserByUsername(\);
+            
+            if (!\) {
+                return [
+                    'success' => false,
+                    'message' => 'Tài khoản không tồn tại'
+                ];
+            }
+            
+            // 3-layer authentication: username + phone + cccd
+            if (\['phone'] !== \ || \['cccd'] !== \) {
+                return [
+                    'success' => false,
+                    'message' => 'Thông tin xác thực không chính xác (Số điện thoại hoặc CCCD sai)'
+                ];
+            }
+            
+            // Hash new password
+            \ = password_hash(\, PASSWORD_HASH_ALGO);
+            
+            // Update password
+            \ = 'UPDATE users SET password = ? WHERE id = ?';
+            
+            if (\->query(\, [\, \['id']])) {
+                return [
+                    'success' => true,
+                    'message' => 'Đổi mật khẩu thành công'
+                ];
+            }
+            
+            return [
+                'success' => false,
+                'message' => 'Lỗi khi cập nhật mật khẩu'
+            ];
+            
+        } catch(Exception \) {
+            logError('Reset Password Error: ' . \->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Lỗi hệ thống'
+            ];
+        }
+    }
+    
+    /**
+     * Update Profile - Change user information
+     */
+    public function updateProfile(\, \) {
+        try {
+            // Validate email if provided
+            if (!empty(\['email'])) {
+                if (!preg_match(EMAIL_REGEX, \['email'])) {
+                    return [
+                        'success' => false,
+                        'message' => 'Email không hợp lệ'
+                    ];
+                }
+                
+                // Check if email is already used by another user
+                \ = \->getUserByEmail(\['email']);
+                if (\ && \['id'] !== \) {
+                    return [
+                        'success' => false,
+                        'message' => 'Email đã được sử dụng'
+                    ];
+                }
+            }
+            
+            // Validate phone if provided
+            if (!empty(\['phone']) && !preg_match(PHONE_REGEX, \['phone'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Số điện thoại không hợp lệ'
+                ];
+            }
+            
+            // Build update query
+            \ = [];
+            \ = [];
+            
+            if (!empty(\['email'])) {
+                \[] = 'email = ?';
+                \[] = \['email'];
+            }
+            
+            if (!empty(\['phone'])) {
+                \[] = 'phone = ?';
+                \[] = \['phone'];
+            }
+            
+            if (!empty(\['gender'])) {
+                \[] = 'gender = ?';
+                \[] = \['gender'];
+            }
+            
+            if (!empty(\['avatar_url'])) {
+                \[] = 'avatar_url = ?';
+                \[] = \['avatar_url'];
+            }
+            
+            if (empty(\)) {
+                return [
+                    'success' => false,
+                    'message' => 'Không có dữ liệu để cập nhật'
+                ];
+            }
+            
+            \[] = \;
+            \ = 'UPDATE users SET ' . implode(', ', \) . ' WHERE id = ?';
+            
+            if (\->query(\, \)) {
+                return [
+                    'success' => true,
+                    'message' => 'Cập nhật hồ sơ thành công'
+                ];
+            }
+            
+            return [
+                'success' => false,
+                'message' => 'Lỗi cập nhật hồ sơ'
+            ];
+            
+        } catch(Exception \) {
+            logError('Update Profile Error: ' . \->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Lỗi hệ thống'
+            ];
+        }
+    }
+    
+    /**
+     * Change Password - Require old password
+     */
+    public function changePassword(\, \, \) {
+        try {
+            // Validate new password
+            if (strlen(\) < PASSWORD_MIN_LENGTH) {
+                return [
+                    'success' => false,
+                    'message' => 'Mật khẩu mới phải có ít nhất ' . PASSWORD_MIN_LENGTH . ' ký tự'
+                ];
+            }
+            
+            // Get user
+            \ = \->getUserById(\);
+            
+            if (!\) {
+                return [
+                    'success' => false,
+                    'message' => 'Tài khoản không tồn tại'
+                ];
+            }
+            
+            // Get full user record with password
+            \ = 'SELECT password FROM users WHERE id = ?';
+            \ = \->fetch(\, [\]);
+            
+            // Verify old password
+            if (!password_verify(\, \['password'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Mật khẩu cũ không chính xác'
+                ];
+            }
+            
+            // Hash new password
+            \ = password_hash(\, PASSWORD_HASH_ALGO);
+            
+            // Update password
+            \ = 'UPDATE users SET password = ? WHERE id = ?';
+            
+            if (\->query(\, [\, \])) {
+                return [
+                    'success' => true,
+                    'message' => 'Đổi mật khẩu thành công'
+                ];
+            }
+            
+            return [
+                'success' => false,
+                'message' => 'Lỗi khi đổi mật khẩu'
+            ];
+            
+        } catch(Exception \) {
+            logError('Change Password Error: ' . \->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Lỗi hệ thống'
+            ];
+        }
+    }
+    
+    /**
+     * Get pending students (for admin/teacher approval)
+     */
+    public function getPendingStudents() {
+        \ = 'SELECT id, username, full_name, email, phone, cccd, role, status, created_at 
+                 FROM users 
+                 WHERE role = ? AND status = ? 
+                 ORDER BY created_at DESC';
+        return \->fetchAll(\, [ROLE_STUDENT, STATUS_PENDING]);
+    }
+    
+    /**
+     * Approve user (set status to Active)
+     */
+    public function approveUser(\) {
+        try {
+            \ = 'UPDATE users SET status = ? WHERE id = ?';
+            
+            if (\->query(\, [STATUS_ACTIVE, \])) {
+                return [
+                    'success' => true,
+                    'message' => 'Duyệt tài khoản thành công'
+                ];
+            }
+            
+            return [
+                'success' => false,
+                'message' => 'Lỗi duyệt tài khoản'
+            ];
+            
+        } catch(Exception \) {
+            logError('Approve User Error: ' . \->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Lỗi hệ thống'
+            ];
+        }
+    }
+    
+    /**
+     * Reject user (set status to Inactive)
+     */
+    public function rejectUser(\) {
+        try {
+            \ = 'UPDATE users SET status = ? WHERE id = ?';
+            
+            if (\->query(\, [STATUS_INACTIVE, \])) {
+                return [
+                    'success' => true,
+                    'message' => 'Từ chối tài khoản thành công'
+                ];
+            }
+            
+            return [
+                'success' => false,
+                'message' => 'Lỗi từ chối tài khoản'
+            ];
+            
+        } catch(Exception \) {
+            logError('Reject User Error: ' . \->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Lỗi hệ thống'
+            ];
+        }
+    }
+    
+    /**
+     * Get all users with pagination
+     */
+    public function getAllUsers(\ = null, \ = null, \ = 1, \ = ITEMS_PER_PAGE) {
+        \ = (\ - 1) * \;
+        
+        \ = 'SELECT id, username, full_name, email, phone, role, status, created_at FROM users WHERE 1=1';
+        \ = [];
+        
+        if (\) {
+            \ .= ' AND role = ?';
+            \[] = \;
+        }
+        
+        if (\) {
+            \ .= ' AND status = ?';
+            \[] = \;
+        }
+        
+        \ .= ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+        \[] = \;
+        \[] = \;
+        
+        return \->fetchAll(\, \);
     }
 }
 ?>
